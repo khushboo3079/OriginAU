@@ -1,0 +1,13 @@
+# Docker ignore file to reduce image size
+node_modules/
+npm-debug.log
+.git/
+.gitignore
+.DS_Store
+*.md
+test-results/
+playwright-report/
+downloads/
+.idea/
+.vscode/
+*.log

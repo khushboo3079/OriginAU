@@ -1,0 +1,12 @@
+node_modules/
+/test-results/
+/playwright-report/
+/playwright/.cache/
+/dist/
+/.idea/
+*.log
+.DS_Store
+downloads/
+*.pdf
+.env
+package-lock.json
