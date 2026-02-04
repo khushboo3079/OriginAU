@@ -31,9 +31,9 @@ export class PricingPage {
    * Navigate to the pricing page
    */
   async navigateToPricing(): Promise<void> {
-    await this.page.goto(envConfig.baseUrl + '/pricing.html');
+    await this.page.goto(envConfig.baseUrl + '/pricing.html', { waitUntil: 'domcontentloaded' });
     await expect(this.page).toHaveURL(/.*pricing.*/);
-    await this.page.waitForLoadState('networkidle');
+    await this.ADDRESS_SEEARCH_BOX_ID.waitFor({ state: 'visible', timeout: envConfig.timeouts.element });
     const elementExists = await this.ADDRESS_SEEARCH_BOX_ID.count();
     console.log(`✓ Successfully navigated to pricing page`);
     console.log(`✓ Address lookup elements found: ${elementExists}`);
