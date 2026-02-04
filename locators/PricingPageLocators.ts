@@ -1,28 +1,4 @@
-import { Page, Locator } from '@playwright/test';
 
-/**
- * Locators for Origin Energy Pricing page
- */
-export class PricingPageLocators {
-  readonly page: Page;
-  readonly addressInput: Locator;
-  readonly addressSuggestions: Locator;
-  readonly gasCheckbox: Locator;
-  readonly planBPIDLink: Locator;
-  readonly plansContainer: Locator;
-  readonly planCards: Locator;
-
-  constructor(page: Page) {
-    this.page = page;
-    this.addressInput = page.locator('input[placeholder*="address"], input[type="text"]').first();
-    this.addressSuggestions = page.locator('ul[role="listbox"], li[role="option"]');
-    this.gasCheckbox = page.locator('input[type="checkbox"][name*="gas"], label:has-text("Gas")');
-    this.planBPIDLink = page.locator('a[href*="plan"], td:has-text("BPID") >> .. >> a').first();
-    this.plansContainer = page.locator('[class*="plan"], [data-testid*="plan"]');
-    this.planCards = page.locator('[class*="card"], [class*="plan-item"]');
-  }
-
-}
 export const ADDRESS_SEEARCH_BOX_ID = '//input[@id="address-lookup" and @type="text"]';
 export const PLAN_LIST_CONTAINER = '//div[@id="searchResultsContainer"]';
 export const PLAN_LIST_DISTRIBUTOR_COL="//th[text()='Distributor']";

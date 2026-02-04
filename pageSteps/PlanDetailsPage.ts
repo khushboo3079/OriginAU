@@ -1,67 +1,76 @@
-import { Page } from '@playwright/test';
+import { Locator, Page, expect } from '@playwright/test';
 import { BasePage } from './BasePage';
-import { PlanDetailsPageLocators } from '../locators/PlanDetailsPageLocators';
+import * as locators from '../locators/PlanDetailsPageLocators';
+import { getEnvConfig } from '../utils/envConfig';
+const fs = require('fs');
+const path = require('path');
+const envConfig = getEnvConfig();
 
-/**
- * Page Object Model for Plan Details/PDF page
- */
-export class PlanDetailsPage extends BasePage {
-  private locators: PlanDetailsPageLocators;
+export class PlanDetailsPage {
+
+  readonly page: Page;
+  readonly DOWNLOADBUTTON: Locator;
 
   constructor(page: Page) {
-    super(page);
-    this.locators = new PlanDetailsPageLocators(page);
+    this.page = page;
+    this.DOWNLOADBUTTON = page.locator(locators.DOWNLOADBUTTON);
   }
 
   /**
-   * Download the PDF file
-   * @returns The path to the downloaded file
+   *  Verify new tab opened with PDF URL
    */
-  async downloadPDF(): Promise<string> {
-    // Wait for the page to load
+  async verifyPDFTabOpened(): Promise<void> {
     await this.page.waitForLoadState('domcontentloaded');
-    await this.page.waitForTimeout(2000);
-    const downloadPromise = this.page.waitForEvent('download', { timeout: 30000 });
-    
-    const downloadBtn = this.locators.downloadButton.first();
-    
-    if (await downloadBtn.count() > 0) {
-      await downloadBtn.click();
-    } else {
-      // If no download button, the current page itself might be the PDF
-      // Trigger download by navigating to the URL
-      const url = this.page.url();
-      if (url.includes('.pdf') || this.page.url().includes('EnergyFacts')) {
-        // The page itself is a PDF, trigger download
-        await this.page.evaluate(() => {
-          window.location.href = window.location.href;
-        });
-      }
+    const currentUrl = this.page.url();
+    console.log(`New tab URL: ${currentUrl}`);
+    expect(currentUrl).toContain('.pdf');
+    expect(currentUrl).toContain('origin');
+    console.log(`✓ PDF page opened in new tab`);
+  }
+
+  /**
+   *  Download PDF to local file system
+   * @returns Path to downloaded PDF file
+   */
+  async downloadPDFToLocal(): Promise<string> {
+    console.log('Downloading PDF');
+    const pdfUrl = this.page.url();
+    const fileName = pdfUrl.split('/').pop()?.split('?')[0] || `plan_${Date.now()}.pdf`;
+    const pdfPath = `test-results/${fileName}`;
+    const response = await this.page.context().request.get(pdfUrl);
+    if (!response.ok()) {
+      throw new Error(`Failed to download PDF: ${response.status()}`);
     }
-
-    const download = await downloadPromise;
-    
-    // Save the download to a specific path
-    const fileName = download.suggestedFilename() || 'plan.pdf';
-    const filePath = `downloads/${fileName}`;
-    await download.saveAs(filePath);
-    
-    return filePath;
+    const buffer = await response.body();
+    const dir = path.dirname(pdfPath);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    fs.writeFileSync(pdfPath, buffer);
+    const fileSizeKB = (buffer.length / 1024).toFixed(2);
+    console.log(`✓ PDF downloaded: ${pdfPath} (${fileSizeKB} KB)`);
+    return pdfPath;
   }
 
   /**
-   * Get the URL of the PDF
+   * Assert PDF content is a Gas plan
+   * @param pdfPath - Path to the PDF file
+   * @param searchStrings - Array of strings to validate in PDF
    */
-  async getPDFUrl(): Promise<string> {
-    return this.page.url();
-  }
-
-  /**
-   * Check if the page is displaying a PDF
-   */
-  async isPDFPage(): Promise<boolean> {
-    const url = this.page.url();
-    return url.includes('.pdf') || url.includes('EnergyFacts') || 
-           await this.locators.pdfViewer.isVisible();
+  async assertGasPlan(pdfPath: string, searchStrings: string[]): Promise<void> {
+    console.log(`Validating PDF content...`);
+    
+    const { PDFUtil } = require('../utils/PDFUtil');
+    const pdfContent = await PDFUtil.extractTextFromPDF(pdfPath);
+    const contentLower = pdfContent.toLowerCase();
+    
+    // Validate each search string
+    for (const searchString of searchStrings) {
+      const found = contentLower.includes(searchString.toLowerCase());
+      expect(found).toBeTruthy();
+      console.log(`✓ PDF contains "${searchString}"`);
+    }
+    
+    console.log(`✓ All validations passed`);
   }
 }
