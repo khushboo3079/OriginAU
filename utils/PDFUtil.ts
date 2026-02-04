@@ -1,7 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
 
-// Use dynamic import for pdf-parse since it's an ES module
 let pdfParse: any;
 
 /**
@@ -25,18 +24,12 @@ export class PDFUtil {
    */
   static async extractTextFromPDF(filePath: string): Promise<string> {
     const parse = await this.initPdfParse();
-    
-    // Ensure the file exists
     if (!fs.existsSync(filePath)) {
       throw new Error(`PDF file not found: ${filePath}`);
     }
-
-    // Read the PDF file
     const dataBuffer = fs.readFileSync(filePath);
-    
-    // Parse the PDF
     const data = await parse(dataBuffer);
-    
+
     return data.text;
   }
 
@@ -59,8 +52,6 @@ export class PDFUtil {
   static async isGasPlan(filePath: string): Promise<boolean> {
     const content = await this.extractTextFromPDF(filePath);
     const lowerContent = content.toLowerCase();
-    
-    // Check for Gas-related keywords
     const gasKeywords = [
       'gas plan',
       'natural gas',
@@ -73,11 +64,11 @@ export class PDFUtil {
 
     // Check if any gas keyword is present
     const hasGasKeyword = gasKeywords.some(keyword => lowerContent.includes(keyword));
-    
+
     // Additional check: should not be exclusively an electricity plan
-    const electricityOnly = lowerContent.includes('electricity only') || 
-                           (lowerContent.includes('electricity') && !lowerContent.includes('gas'));
-    
+    const electricityOnly = lowerContent.includes('electricity only') ||
+      (lowerContent.includes('electricity') && !lowerContent.includes('gas'));
+
     return hasGasKeyword && !electricityOnly;
   }
 
@@ -89,7 +80,7 @@ export class PDFUtil {
     const parse = await this.initPdfParse();
     const dataBuffer = fs.readFileSync(filePath);
     const data = await parse(dataBuffer);
-    
+
     return {
       numPages: data.numpages,
       info: data.info,

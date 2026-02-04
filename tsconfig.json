@@ -15,8 +15,9 @@
   },
   "include": [
     "tests/**/*",
-    "pages/**/*",
+    "pageSteps/**/*",
     "locators/**/*",
+    "testData/**/*",
     "utils/**/*"
   ],
   "exclude": [
