@@ -16,7 +16,7 @@ const config: PlaywrightTestConfig = {
   ],
 
   use: {
-    headless: false,
+    headless: !!process.env.CI,
     screenshot: 'on',
     video: 'retain-on-failure',
     trace: 'on',

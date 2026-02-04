@@ -1,27 +1,40 @@
-# Use official Playwright image with all browsers pre-installed
-FROM mcr.microsoft.com/playwright:v1.48.0-jammy
 
-# Set working directory
+FROM mcr.microsoft.com/playwright:v1.48.2-focal
+
+
+
 WORKDIR /app
 
 # Copy package files
-COPY package*.json ./
-COPY tsconfig.json ./
-COPY playwright.config.ts ./
+
+COPY package.json package-lock.json* yarn.lock* ./
+
+
 
 # Install dependencies
-RUN npm ci
 
-# Copy the rest of the application
-COPY pages/ ./pages/
-COPY tests/ ./tests/
-COPY utils/ ./utils/
+RUN npm install
 
-# Create downloads directory
-RUN mkdir -p downloads
 
-# Set environment variable to run in headless mode
+
+# Copy source code
+
+COPY . .
+
+
+
+# Install Playwright browsers
+
+RUN npx playwright install
+
+
+
+# Set CI environment variable for test configuration
+
 ENV CI=true
 
-# Run tests by default
+
+
+# Run tests
+
 CMD ["npm", "test"]
