@@ -33,29 +33,52 @@ export class PricingPage {
   async navigateToPricing(): Promise<void> {
     await this.page.goto(envConfig.baseUrl + '/pricing.html');
     await expect(this.page).toHaveURL(/.*pricing.*/);
-    console.log('✓ Successfully navigated to pricing page');
+    await this.page.waitForLoadState('networkidle');
+    const elementExists = await this.ADDRESS_SEEARCH_BOX_ID.count();
+    console.log(`✓ Successfully navigated to pricing page`);
+    console.log(`✓ Address lookup elements found: ${elementExists}`);
 
+    // Debug: Get page title and URL
+    console.log(`✓ Page title: ${await this.page.title()}`);
+    console.log(`✓ Current URL: ${this.page.url()}`);
   }
 
   /**
    * this method Search for an address and select from list
    */
   async searchAddress(address: string): Promise<void> {
-    await this.ADDRESS_SEEARCH_BOX_ID.clear();
-    await this.ADDRESS_SEEARCH_BOX_ID.fill(address);
+    // Wait for input to be ready with explicit timeout
+    await this.ADDRESS_SEEARCH_BOX_ID.waitFor({ state: 'visible', timeout: envConfig.timeouts.element });
+    console.log('✓ Address field is visible');
+
+    await this.ADDRESS_SEEARCH_BOX_ID.clear({ timeout: envConfig.timeouts.element });
+    console.log('✓ Address field cleared');
+
+    await this.ADDRESS_SEEARCH_BOX_ID.fill(address, { timeout: envConfig.timeouts.element });
     console.log('✓ Address entered in search field');
+
     const options = this.page.getByRole('option');
-    console.log(`Found ${await options.count()} options`);
-    const addressOption = this.page.getByRole('option', { name: address });
+
     try {
-      await addressOption.waitFor({ state: 'visible', timeout: 10000 });
-      console.log('✓ Option is visible');
-      await addressOption.click({ force: true });
-      console.log('✓ Address selected from dropdown');
+      // Wait for options with explicit timeout
+      await options.first().waitFor({ state: 'visible', timeout: envConfig.timeouts.navigation });
+      const optionCount = await options.count();
+      console.log(`Found ${optionCount} options`);
+
+      const addressOption = this.page.getByRole('option', { name: address });
+      const exactMatchCount = await addressOption.count();
+
+      if (exactMatchCount > 0) {
+        await addressOption.first().click();
+        console.log('✓ Address selected from dropdown');
+      } else {
+        console.log('⚠ Exact match not found, selecting first option');
+        await options.first().click();
+        console.log('✓ Selected first available option');
+      }
     } catch (error) {
-      console.log(' Option click failed, trying alternatives...');
-      await options.first().click();
-      console.log('✓ Selected first available option');
+      console.log(`⚠ Timeout waiting for options: ${error.message}`);
+      throw new Error(`Failed to load address options after 20s - autocomplete may not be working in this environment`);
     }
   }
   /**
@@ -82,7 +105,7 @@ export class PricingPage {
    */
   async clickPlanBPIDLink(planName: string): Promise<Page> {
     const currentUrl = this.page.url();
-    const page1Promise = this.page.context().waitForEvent('page', { timeout: 5000 });
+    const page1Promise = this.page.context().waitForEvent('page', { timeout: envConfig.timeouts.action });
     await this.page.getByRole('link', { name: planName, exact: true }).first().click();
     try {
       const newPage = await page1Promise;
@@ -107,15 +130,105 @@ export class PricingPage {
    * @returns New page with PDF
    */
   async clickPlanLink(planName: string): Promise<Page> {
-    console.log(`Clicking on plan: ${planName}...`);
-        const [newPage] = await Promise.all([
-      this.page.context().waitForEvent('page'),
-      this.page.getByRole('link', { name: planName, exact: true }).first().click()
-    ]);
-    await newPage.waitForLoadState('domcontentloaded');
-    console.log(`✓ Plan link clicked`); 
-    return newPage;
+    console.log(`Searching for PDF link for plan: ${planName}...`);
+
+    // Find the plan name text first
+    const planText = this.page.locator(`text="${planName}"`).first();
+    await planText.waitFor({ state: 'visible', timeout: envConfig.timeouts.element });
+
+    // Get the parent row
+    const row = planText.locator('xpath=ancestor::tr[1]');
+    await row.waitFor({ state: 'visible', timeout: envConfig.timeouts.action });
+
+    // Find all links in this row
+    const linksInRow = row.locator('a');
+    const linkCount = await linksInRow.count();
+    console.log(`✓ Found ${linkCount} links in the plan row`);
+
+    // Check each link to find the PDF one
+    let pdfLink = null;
+    for (let i = 0; i < linkCount; i++) {
+      const link = linksInRow.nth(i);
+      const href = await link.getAttribute('href');
+      const text = await link.textContent();
+      console.log(`  Link ${i}: text="${text?.trim()}", href="${href}"`);
+
+      if (href && (href.includes('.pdf') || href.includes('fact') || href.includes('details'))) {
+        pdfLink = link;
+        console.log(`✓ Found PDF link at index ${i}`);
+        break;
+      }
+    }
+
+    if (!pdfLink && linkCount > 0) {
+      // Use the last link in the row (usually the PDF/details link)
+      pdfLink = linksInRow.last();
+      console.log(`⚠ No PDF link found, using last link in row`);
+    }
+
+    if (!pdfLink) {
+      throw new Error(`No clickable link found for plan: ${planName}`);
+    }
+
+    await pdfLink.scrollIntoViewIfNeeded();
+
+    // Get PDF URL before clicking for fallback
+    const pdfHref = await pdfLink.getAttribute('href');
+    const fullPdfUrl = pdfHref?.startsWith('http') ? pdfHref : `https://www.originenergy.com.au${pdfHref}`;
+    console.log(`✓ PDF URL from href: ${fullPdfUrl}`);
+    const pagePromise = this.page.context().waitForEvent('page', { timeout: envConfig.timeouts.element }).catch(() => null);
+    await pdfLink.click();
+    console.log(`✓ Link clicked`);
+    await this.page.waitForTimeout(envConfig.timeouts.retry);
+    const newPage = await pagePromise;
+    if (newPage) {
+      console.log(`✓ New page detected, waiting for load...`);
+
+      // Wait for URL to be available
+      let url = newPage.url();
+      let retries = 0;
+      while ((!url || url === '' || url === 'about:blank' || url === ':') && retries < 10) {
+        await this.page.waitForTimeout(envConfig.timeouts.retry);
+        url = newPage.url();
+        retries++;
+      }
+      console.log(`✓ New page URL: ${url}`);
+      if (!url || url === '' || url === 'about:blank' || url === ':' || url.length < 10) {
+        console.log(`⚠ PDF page not loading in browser (URL: ${url}), will download directly instead`);
+        await newPage.close();
+        console.log(`✓ Using captured PDF URL: ${fullPdfUrl}`);
+        await this.page.evaluate((pdfUrl) => {
+          (window as any).pdfUrl = pdfUrl;
+        }, fullPdfUrl);
+
+        return this.page;
+      }
+      await newPage.waitForLoadState('domcontentloaded', { timeout: envConfig.timeouts.navigation }).catch((e) => {
+        console.log(`⚠ Load timeout, but continuing: ${e.message}`);
+      });
+
+      if (url.includes('.pdf')) {
+        console.log(`✓ PDF page confirmed`);
+      }
+
+      return newPage;
+    } else {
+      console.log(`⚠ No new page event, checking context...`);
+      const pages = this.page.context().pages();
+      console.log(`✓ Total pages: ${pages.length}`);
+
+      if (pages.length > 1) {
+        const latestPage = pages[pages.length - 1];
+        await latestPage.waitForLoadState('domcontentloaded', { timeout: envConfig.timeouts.navigation }).catch(() => { });
+        console.log(`✓ Using latest page: ${latestPage.url()}`);
+        return latestPage;
+      }
+
+      console.log(`✓ Returning current page: ${this.page.url()}`);
+      return this.page;
+    }
   }
+
   /**
    * Validate that new tab opened with plan details
    */

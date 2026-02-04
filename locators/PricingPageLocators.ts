@@ -1,5 +1,5 @@
 
-export const ADDRESS_SEEARCH_BOX_ID = '//input[@id="address-lookup" and @type="text"]';
+export const ADDRESS_SEEARCH_BOX_ID = "//input[@id='address-lookup']";
 export const PLAN_LIST_CONTAINER = '//div[@id="searchResultsContainer"]';
 export const PLAN_LIST_DISTRIBUTOR_COL="//th[text()='Distributor']";
 export const PLAN_LIST_BPID_EFS_COL="//th[text()='BPID/EFS']";

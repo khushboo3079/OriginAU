@@ -1,0 +1,22 @@
+version: '3.8'
+
+services:
+  playwright-tests:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: originau-automation:latest
+    container_name: originau-tests
+    environment:
+      - CI=true
+      - TEST_ENV=dev
+    volumes:
+      - ./test-results:/app/test-results
+      - ./playwright-report:/app/playwright-report
+    command: npm test
+    networks:
+      - test-network
+
+networks:
+  test-network:
+    driver: bridge

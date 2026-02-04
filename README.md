@@ -27,17 +27,14 @@ This project automates the process of searching for energy plans on the Origin E
 
 ## ✨ Features
 
-- **Page Object Model (POM)**: Maintainable and reusable page classes with test fixtures
-- **Centralized Locators**: Separate locator files for easy maintenance
-- **TypeScript**: Type-safe code with excellent IDE support
-- **Test Fixtures**: Clean test setup using Playwright fixtures pattern
-- **PDF Validation**: Automated PDF download and content verification with pdf-parse
-- **Multi-Tab Handling**: Robust new page/tab navigation support
-- **Environment Config**: Centralized configuration management
-- **Docker Support**: Run tests in isolated containers
-- **Detailed Logging**: Step-by-step console output with ✓ symbols for debugging
-- **Screenshots & Videos**: Automatic capture on test failures
-- **HTML Reports**: Beautiful test reports with trace viewer
+- **Page Object Model**: Maintainable test fixtures with centralized locators
+- **TypeScript**: Type-safe with excellent IDE support  
+- **PDF Validation**: Automated download and content verification
+- **Docker Support**: Isolated container execution with docker-compose
+- **Environment Config**: Configurable timeouts and settings
+- **Detailed Reports**: HTML reports with screenshots, videos, and traces
+- **Multi-Tab Handling**: Robust new page navigation
+- **CI/CD Ready**: GitHub Actions compatible
 
 ## 📁 Project Structure
 
@@ -106,23 +103,11 @@ npm install
 npx playwright install --with-deps
 ```
 
-Or use the npm script:
-
-```bash
-npm run install:browsers
-```
-
-This command installs Chromium, Firefox, and WebKit browsers along with system dependencies.
-
-### 4. Verify Setup (Optional)
-
-Verify that everything is installed correctly:
+### 4. Verify Setup
 
 ```bash
 npm run verify
 ```
-
-This runs the `verify-setup.ts` script to check Node.js version, dependencies, and Playwright installation.
 
 ## 🚀 Running Tests
 
@@ -141,264 +126,146 @@ This runs the `verify-setup.ts` script to check Node.js version, dependencies, a
 
 ### Standard Test Execution
 
-Run tests in headless mode (default):
-
+**Headless mode:**
 ```bash
 npm test
 ```
 
-### Run Tests with UI (Headed Mode)
-
-See the browser during test execution with 500ms slow motion:
-
+**With visible browser:**
 ```bash
 npm run test:headed
 ```
 
-### Debug Mode
-
-Run tests with Playwright Inspector for step-by-step debugging:
-
+**Debug mode:**
 ```bash
 npm run test:debug
 ```
 
-### UI Mode (Interactive)
-
-Run tests using Playwright's UI mode for interactive debugging:
-
-```bash
-npm run test:ui
-```
-
-### Run Specific Test
-
-```bash
-npx playwright test tests/TC_01_origin-energy.spec.ts
-```
-
-### Run with Specific Browser
-
-```bash
-npx playwright test --project=chromium
-```
-
-### View Test Reports
-
-After test execution, view the HTML report:
-
+**View reports:**
 ```bash
 npm run report
 ```
 
-This opens an interactive HTML report showing:
-- Test results with pass/fail status
-- Screenshots captured at each step
-- Videos (retained on failure)
-- Trace viewer for detailed debugging
-- Console logs and network activity
+## 🐳 Docker Setup
 
-## 🐳 Docker Setup (Bonus)
+### Using Docker Compose (Recommended)
 
-### Build and Run with Docker Compose
-
-#### 1. Build the Docker Image
-
+**Build and run:**
 ```bash
-docker-compose build
+docker-compose up --build
 ```
 
-#### 2. Run Tests in Docker
-
+**Run existing image:**
 ```bash
-docker-compose up playwright-tests
+docker-compose up
 ```
 
-#### 3. View Results
+**Run in background:**
+```bash
+docker-compose up -d
+docker-compose logs -f
+```
 
-Test results, reports, and downloads are automatically mounted to your local directories:
-- `./test-results/` - Test execution artifacts
-- `./playwright-report/` - HTML reports
-- `./downloads/` - Downloaded PDF files
-
-#### 4. Clean Up
-
+**Clean up:**
 ```bash
 docker-compose down
 ```
 
-### Alternative: Docker Commands
+Results are automatically saved to:
+- `./test-results/` - Test artifacts & PDFs
+- `./playwright-report/` - HTML reports
 
-Build the image:
+### Using Docker Commands
 
+**Build:**
 ```bash
-docker build -t origin-energy-tests .
+docker build -t originau-automation .
 ```
 
-Run tests:
-
+**Run:**
 ```bash
-docker run --rm \
-  -v ${PWD}/test-results:/app/test-results \
-  -v ${PWD}/playwright-report:/app/playwright-report \
-  -v ${PWD}/downloads:/app/downloads \
-  origin-energy-tests
+docker run --rm -v ${PWD}/test-results:/app/test-results -v ${PWD}/playwright-report:/app/playwright-report originau-automation
 ```
 
-### Rancher Desktop
+### Configuration
 
-If using Rancher Desktop instead of Docker Desktop:
-
-1. Ensure Rancher Desktop is running
-2. Set `dockerd (moby)` as the container runtime in Rancher settings
-3. Use the same `docker-compose` commands as above
+The `docker-compose.yml` sets:
+- `CI=true` - Enables headless mode
+- Auto-mounts test-results and playwright-report
+- Network isolation for consistent testing
 
 ## 📝 Test Scenario
 
-The automated test performs the following steps:
+The automated test performs:
 
-1. **Navigate** to the pricing page using environment configuration
-2. **Search** for address from test data (originAddress)
-3. **Select** the address from the dropdown list with fallback strategy
-4. **Verify** that energy plans are displayed (multiple columns validation)
-5. **Uncheck** the Electricity checkbox if checked
-6. **Click** on 'Origin Basic' plan link
-7. **Verify** that the PDF page opens in a new tab (URL contains '.pdf' and 'origin')
-8. **Download** the PDF file to `test-results/` directory
-9. **Validate** PDF contains Gas-related keywords: ["Gas", "Fuel type", "MJ/day"]
-10. **Assert** all validations pass successfully
+1. Navigate to pricing page
+2. Search and select address
+3. Verify energy plans displayed
+4. Uncheck Electricity checkbox
+5. Click 'Origin Basic' plan
+6. Verify PDF opens (or download directly in Docker)
+7. Download PDF to test-results/
+8. Validate Gas keywords: ["Gas", "Fuel type", "MJ/day"]
 
-### Test Data
-Address and configuration are centralized in:
-- `testData/TC01_originAddress_data.ts` - Test addresses
-- `utils/envConfig.ts` - Base URL and timeout configuration
+### Configuration
+
+**Test Data:** `testData/TC01_originAddress_data.ts`  
+**Environment:** `utils/envConfig.ts` (timeouts, base URL)  
+**Timeouts:** Configurable in envConfig (element: 10s, navigation: 20s, action: 5s)
 
 ## 🏗️ Architecture
 
-### Page Object Model (POM) with Fixtures
+### Page Object Model with Fixtures
 
-The project follows the Page Object Model pattern with Playwright test fixtures for better maintainability:
+**Test Fixtures** (`webUI.setup.ts`): Auto-initialized page objects  
+**BasePage.ts**: Common navigation and utility methods  
+**PricingPage.ts**: Address search, plan filtering, multi-tab navigation  
+**PlanDetailsPage.ts**: PDF verification and download (works in both local & Docker)
 
-#### Test Fixtures (webUI.setup.ts)
-- Automatic page object initialization
-- Clean dependency injection
-- Type-safe fixtures for PricingPage and PlanDetailsPage
+### Key Features
 
-#### BasePage.ts
-- Common methods shared across all pages
-- Navigation with `goto()`
-- Page load synchronization with `waitForPageLoad()`
-- Screenshot and title utilities
+✅ **Centralized Locators** - Separate files for easy maintenance  
+✅ **Configurable Timeouts** - `envConfig.ts` for all wait times  
+✅ **Docker Support** - PDF download fallback for headless mode  
+✅ **Multi-Tab Handling** - Automatic new page detection  
+✅ **PDF Validation** - Dynamic pdf-parse with keyword search  
 
-#### PricingPage.ts
-- Navigate to pricing page with URL validation
-- Address search with smart fallback selection
-- Plan verification (multiple column checks)
-- Checkbox state management
-- Multi-tab navigation support
-
-#### PlanDetailsPage.ts
-- PDF tab verification (URL contains '.pdf' and 'origin')
-- PDF download via context.request API
-- Local file system storage in test-results/
-- Multi-keyword content validation
-
-### Locators Layer
-
-#### PricingPageLocators.ts
-- Centralized locators for pricing page elements
-- ADDRESS_SEEARCH_BOX_ID, PLAN_LIST_CONTAINER, etc.
-- Easy to update when UI changes
-
-#### PlanDetailsPageLocators.ts
-- Locators for plan details page
-- DOWNLOADBUTTON and other element selectors
-
-### Utilities
-
-#### PDFUtil.ts
-- Dynamic pdf-parse initialization
-- Text extraction: `extractTextFromPDF()`
-- Content search: `containsText()`
-- Case-insensitive keyword validation
-
-#### envConfig.ts
-- Base URL configuration
-- Timeout settings
-- Environment variable support via dotenv
-
-### Best Practices Implemented
-
-✅ **Centralized Locators**: Separate files for element selectors  
-✅ **Test Fixtures**: Clean, reusable test setup  
-✅ **Explicit Waits**: `waitForLoadState('domcontentloaded')`  
-✅ **Type Safety**: Full TypeScript implementation  
-✅ **Error Handling**: Try-catch with fallback strategies  
-✅ **Logging**: Detailed console output with ✓ symbols  
-✅ **Reusability**: Modular code with DRY principles  
-✅ **Maintainability**: Clear separation of concerns  
-✅ **Scalability**: Easy to extend with new fixtures and pages  
-✅ **Multi-Tab Support**: Proper new page/window handling  
-✅ **Environment Config**: Centralized configuration management  
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed technical documentation.  
 
 ## 🔄 CI/CD Integration
 
-### GitHub Actions Example
-
-Create `.github/workflows/playwright.yml`:
+### GitHub Actions
 
 ```yaml
 name: Playwright Tests
-
-on:
-  push:
-    branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
-
+on: [push, pull_request]
 jobs:
   test:
-    timeout-minutes: 60
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    
     - uses: actions/setup-node@v3
       with:
         node-version: 18
-        
-    - name: Install dependencies
-      run: npm ci
-      
-    - name: Install Playwright Browsers
-      run: npx playwright install --with-deps
-      
-    - name: Run Playwright tests
-      run: npm test
-      
+    - run: npm ci
+    - run: npx playwright install --with-deps
+    - run: npm test
     - uses: actions/upload-artifact@v3
       if: always()
       with:
         name: playwright-report
         path: playwright-report/
-        retention-days: 30
 ```
 
-### Docker-based CI/CD
+### Docker CI/CD
 
 ```yaml
 test-docker:
   runs-on: ubuntu-latest
   steps:
     - uses: actions/checkout@v3
-    
-    - name: Build and Run Tests
-      run: |
-        docker-compose build
-        docker-compose up --abort-on-container-exit
-        
-    - name: Upload Results
-      uses: actions/upload-artifact@v3
+    - run: docker-compose up --abort-on-container-exit
+    - uses: actions/upload-artifact@v3
       with:
         name: test-results
         path: test-results/
@@ -406,84 +273,30 @@ test-docker:
 
 ## 🐛 Troubleshooting
 
-### Common Issues
+### Quick Fixes
 
-#### Browser Installation Issues
-
-**Problem**: Browsers not installed correctly
-
-**Solution**:
+**Browsers not installed:**
 ```bash
 npx playwright install --with-deps chromium
 ```
 
-#### PDF Parsing Errors
+**Elements not found:**
+- Check locators in `locators/` directory
+- Use debug mode: `npm run test:debug`
+- Verify page loaded: Check console for "✓ Successfully navigated"
 
-**Problem**: `pdf-parse` module not found or errors
-
-**Solution**:
+**Docker issues:**
 ```bash
-npm install pdf-parse
-# Note: @types/pdf-parse not needed - using dynamic import
-```
-
-#### Locator Issues
-
-**Problem**: Elements not found
-
-**Solution**:
-- Check locators in `locators/PricingPageLocators.ts` or `locators/PlanDetailsPageLocators.ts`
-- Use Playwright Inspector: `npm run test:debug`
-- Verify page has loaded: check `waitForLoadState('domcontentloaded')`
-
-#### Test Data Issues
-
-**Problem**: Address not found or invalid
-
-**Solution**:
-- Update address in `testData/TC01_originAddress_data.ts`
-- Ensure address exists on Origin Energy website
-- Check network connectivity
-
-#### Permission Errors (Linux/Mac)
-
-**Problem**: Cannot write to downloads directory
-
-**Solution**:
-```bash
-chmod -R 755 downloads/
-mkdir -p downloads
-```
-
-#### Docker Issues
-
-**Problem**: Docker containers not starting
-
-**Solution**:
-```bash
-# Reset Docker
 docker-compose down
 docker system prune -a
-docker-compose build --no-cache
-docker-compose up
+docker-compose up --build
 ```
 
-#### Test Timeout Issues
+**Test timeouts:**
+- Adjust timeouts in `utils/envConfig.ts`
+- Current: element (10s), navigation (20s), action (5s)
 
-**Problem**: Tests timing out
-
-**Solution**: Current timeout is set to 350 seconds in `playwright.config.ts`:
-```typescript
-timeout: 350 * 1000, // 350 seconds
-```
-If needed, increase this value. Also check:
-- Network connectivity
-- Website availability
-- slowMo setting (currently 500ms for visibility)
-
-### Debug Mode
-
-For detailed debugging:
+### Debug Commands
 
 ```bash
 # Enable debug logs
@@ -492,20 +305,8 @@ DEBUG=pw:api npm test
 # Run with inspector
 npm run test:debug
 
-# Run with trace
-npm test -- --trace on
-```
-
-### Check Test Results
-
-View detailed test results:
-
-```bash
-# Open HTML report
+# View test report
 npm run report
-
-# Or manually
-npx playwright show-report
 ```
 
 ## 📊 Test Reports

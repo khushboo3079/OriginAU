@@ -20,6 +20,10 @@ const config: PlaywrightTestConfig = {
     screenshot: 'on',
     video: 'retain-on-failure',
     trace: 'on',
+    userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+    extraHTTPHeaders: {
+      'Accept-Language': 'en-US,en;q=0.9',
+    },
   },
 
   projects: [
@@ -31,7 +35,10 @@ const config: PlaywrightTestConfig = {
         browserName: 'chromium',
         viewport: process.env.CI ? { width: 1920, height: 1080 } : null,
         launchOptions: {
-          args: process.env.CI ? [] : ['--start-maximized'],
+          args: process.env.CI ? [
+            '--disable-blink-features=AutomationControlled',
+            '--disable-features=IsolateOrigins,site-per-process',
+          ] : ['--start-maximized'],
           slowMo: process.env.CI ? 0 : 500,
         },
       },

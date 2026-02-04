@@ -14,12 +14,20 @@ type EmailConfig = {
   mailtrap_base_url: string;
 };
 
+type TimeoutConfig = {
+  element: number;
+  navigation: number;
+  action: number;
+  retry: number;
+};
+
 type EnvConfig = {
   baseUrl: string;
   username1: string;
   password1: string;
   db: DataConfig;
   EMAIL: EmailConfig;
+  timeouts: TimeoutConfig;
 };
 
 /* ---------- Helpers ---------- */
@@ -51,6 +59,12 @@ const config: Record<string, Omit<EnvConfig, 'baseUrl'>> = {
       inbox_id: 'dev-inbox-id',
       user_id: 'dev-user-id',
       mailtrap_base_url: 'https://mailtrap.io/api',
+    },
+    timeouts: {
+      element: 10000,      // Element visibility wait (10s)
+      navigation: 20000,   // Page navigation/load wait (20s)
+      action: 5000,        // Click/input action wait (5s)
+      retry: 500,          // Polling interval for retries (0.5s)
     },
   },
 };
