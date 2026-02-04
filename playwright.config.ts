@@ -29,10 +29,10 @@ const config: PlaywrightTestConfig = {
       testDir: './tests',
       use: {
         browserName: 'chromium',
-        viewport: null,
+        viewport: process.env.CI ? { width: 1920, height: 1080 } : null,
         launchOptions: {
-          args: ['--start-maximized'],
-          slowMo: 500,
+          args: process.env.CI ? [] : ['--start-maximized'],
+          slowMo: process.env.CI ? 0 : 500,
         },
       },
     },
